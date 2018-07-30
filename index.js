@@ -1,5 +1,7 @@
 'use strict'
 
+const assert = require('assert');
+
 function mochaReplica(tests) {
     const testResults = [];
 
@@ -21,13 +23,11 @@ const frameworkTests = [
         const tests = [
             function add1() { marks.push(1); },
             function add2() { marks.push(2); },
-        ]
+        ];
 
         mochaReplica(tests);
 
-        if (marks.length !== 2 || marks[0] !== 1 || marks[1] !== 2) {
-            throw new Error('fail');
-        }
+        assert.deepEqual(marks, [1, 2]);
     },
 
     function isFaultTolerant() {
@@ -50,9 +50,7 @@ const frameworkTests = [
 
         const testResults = mochaReplica(tests);
 
-        if (testResults.length !== 2 || testResults[0] !== 'ok - OK' || testResults[1] !== 'fail - FAIL') {
-            throw new Error('fail');
-        }
+        assert.deepEqual(testResults, ['ok - OK', 'fail - FAIL']);
     },
 ];
 
