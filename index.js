@@ -4,12 +4,12 @@ const assert = require('assert');
 
 /** TEST RUNNER *////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-async function testRunner(tests) {
+async function testRunner(tests, timeout = 4000) {
     const testResults = [];
 
     for (const test of tests) {
         try {
-            await test();
+            await Promise.race([test(), new Promise(function (resolve, reject) { setTimeout(reject, timeout, `Timeout of ${timeout} milliseconds`); })]);
             testResults.push([test.name, null]);
         } catch (e) {
             testResults.push([test.name, e]);
@@ -29,7 +29,7 @@ async function testRunner(tests) {
 function testReporter(testResults) {
     return Object.entries(testResults).map(([testName, testError]) => {
         if (testError) {
-            return `${testName} - ${testError.stack}`;
+            return `${testName} - ${testError.stack || testError}`;
         }
 
         return `${testName} - OK`;
@@ -84,7 +84,7 @@ const frameworkTests = [
             function fail() { throw new Error('fail'); },
         ];
 
-        let res = await testRunner(tests);
+        const res = await testRunner(tests);
         const testResults = testReporter(res);
 
         assert.ok(/ok - OK\nfail - Error: fail\n.*at/m.test(testResults));
@@ -92,30 +92,56 @@ const frameworkTests = [
 
     async function handlesAsyncFuncs() {
         const tests = [
-            async function okTest() {
-                return new Promise(function (resolve, reject) {
-                    setTimeout(resolve, 1000, 'Blank');
-                });
-            },
+            function okTest1() {},
             async function okTest2() {
                 return new Promise(function (resolve, reject) {
-                    setTimeout(resolve, 3000, 'Blank');
+                    setTimeout(resolve, 100, 'Blank');
                 });
             },
             async function failTest() {
                 return new Promise(function (resolve, reject) {
-                    setTimeout(reject, 1000, 'This is an error message');
+                    setTimeout(reject, 100, 'This is an error message');
                 });
             },
         ]
 
-        let testResults = await testRunner(tests);
+        const testResults = await testRunner(tests);
 
         assert.deepEqual(testResults, {
-            okTest: null,
+            okTest1: null,
             okTest2: null,
             failTest: 'This is an error message',
         });
+    },
+
+    async function handlesAsyncFuncsTimeouts() {
+        const tests = [
+            async function fast() {
+                return new Promise(function (resolve, reject) {
+                    setTimeout(resolve, 4, 'Blank');
+                });
+            },
+            async function fastEnough() {
+                return new Promise(function (resolve, reject) {
+                    setTimeout(resolve, 39, 'Blank');
+                });
+            },
+            async function slowEnough() {
+                return new Promise(function (resolve, reject) {
+                    setTimeout(resolve, 41, 'Blank');
+                });
+            },
+            async function slow() {
+                return new Promise(function (resolve, reject) {
+                    setTimeout(resolve, 60, 'Blank');
+                });
+            },
+        ]
+
+        const timeout = 40;
+        const testResults = await testRunner(tests, timeout);
+
+        assert.deepEqual(testResults, { fast: null, fastEnough: null, slowEnough: `Timeout of ${timeout} milliseconds`, slow: `Timeout of ${timeout} milliseconds` });
     }
 ];
 
