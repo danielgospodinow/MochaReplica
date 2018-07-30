@@ -1,14 +1,18 @@
 'use strict'
 
 function mochaReplica(tests) {
+    const testResults = [];
+
     for (const test of tests) {
         try {
             test();
-            console.log(test.name, '- OK');
+            testResults.push(test.name + ' - OK');
         } catch (e) {
-            console.log(test.name, '- FAIL');
+            testResults.push(test.name + ' - FAIL');
         }
     }
+
+    return testResults;
 }
 
 const frameworkTests = [
@@ -37,7 +41,20 @@ const frameworkTests = [
             throw new Error('fail');
         }
     },
+
+    function reportsResults() {
+        const tests = [
+            function ok() {},
+            function fail() { throw new Error('fail'); },
+        ];
+
+        const testResults = mochaReplica(tests);
+
+        if (testResults.length !== 2 || testResults[0] !== 'ok - OK' || testResults[1] !== 'fail - FAIL') {
+            throw new Error('fail');
+        }
+    },
 ];
 
 
-mochaReplica(frameworkTests);
+console.log(mochaReplica(frameworkTests).join("\n"));
