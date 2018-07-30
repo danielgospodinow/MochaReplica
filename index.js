@@ -2,19 +2,33 @@
 
 const assert = require('assert');
 
-function mochaReplica(tests) {
+function testRunner(tests) {
     const testResults = [];
 
     for (const test of tests) {
         try {
             test();
-            testResults.push(test.name + ' - OK');
+            testResults.push([test.name, null]);
         } catch (e) {
-            testResults.push(test.name + ' - FAIL');
+            testResults.push([test.name, e]);
         }
     }
 
-    return testResults;
+    const result = {};
+    for (const [testName, testError] of  testResults) {
+        result[testName] = testError;
+    }
+
+    return result;
+}
+
+function testReporter(testResults) {
+    return Object.entries(testResults).map(([testName, testError]) => {
+        if (testError) {
+            return `${testName} - FAIL`
+        }
+        return `${testName} - OK`
+    }).join('\n');
 }
 
 const frameworkTests = [
@@ -25,7 +39,7 @@ const frameworkTests = [
             function add2() { marks.push(2); },
         ];
 
-        mochaReplica(tests);
+        testRunner(tests);
 
         assert.deepEqual(marks, [1, 2]);
     },
@@ -36,10 +50,25 @@ const frameworkTests = [
         ]
 
         try {
-            mochaReplica(tests);
+            testRunner(tests);
         } catch (e) {
             throw new Error('fail');
         }
+    },
+
+    function testRunnerReturnsObjectDescribingTheSuite() {
+        const failError = new Error('fail');
+        const tests = [
+            function ok() {},
+            function fail() { throw failError; },
+        ];
+
+        const testResults = testRunner(tests);
+
+        assert.deepEqual(testResults, {
+            ok: null,
+            fail: failError,
+        });
     },
 
     function reportsResults() {
@@ -48,11 +77,11 @@ const frameworkTests = [
             function fail() { throw new Error('fail'); },
         ];
 
-        const testResults = mochaReplica(tests);
+        const testResults = testReporter(testRunner(tests));
 
-        assert.deepEqual(testResults, ['ok - OK', 'fail - FAIL']);
+        assert.deepEqual(testResults, 'ok - OK\nfail - FAIL');
     },
 ];
 
 
-console.log(mochaReplica(frameworkTests).join("\n"));
+console.log(testReporter(testRunner(frameworkTests)));
