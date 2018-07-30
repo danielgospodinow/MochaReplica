@@ -2,6 +2,8 @@
 
 const assert = require('assert');
 
+/** TEST RUNNER */
+
 function testRunner(tests) {
     const testResults = [];
 
@@ -22,14 +24,19 @@ function testRunner(tests) {
     return result;
 }
 
+/** TEST REPORTER */
+
 function testReporter(testResults) {
     return Object.entries(testResults).map(([testName, testError]) => {
         if (testError) {
-            return `${testName} - FAIL`
+            return `${testName} - ${testError.stack}`;
         }
-        return `${testName} - OK`
+        
+        return `${testName} - OK`;
     }).join('\n');
 }
+
+/** FRAMEWORK TESTS */
 
 const frameworkTests = [
     function runsTestsSequientially() {
@@ -71,7 +78,7 @@ const frameworkTests = [
         });
     },
 
-    function reportsResults() {
+    function reportsResultsWithStack() {
         const tests = [
             function ok() {},
             function fail() { throw new Error('fail'); },
@@ -79,7 +86,7 @@ const frameworkTests = [
 
         const testResults = testReporter(testRunner(tests));
 
-        assert.deepEqual(testResults, 'ok - OK\nfail - FAIL');
+        assert.ok(/ok - OK\nfail - Error: fail\n.*at/m.test(testResults));
     },
 ];
 
