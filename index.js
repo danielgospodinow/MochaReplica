@@ -26,14 +26,28 @@ async function testRunner(tests, timeout = 4000) {
 
 /** TEST REPORTER */////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function testReporter(testResults) {
-    return Object.entries(testResults).map(([testName, testError]) => {
+function testReporter(testResults, tap = false) {
+    const objEntries = Object.entries(testResults);
+
+    return (objEntries.map(([testName, testError], index) => {
         if (testError) {
             return `${testName} - ${testError.stack || testError}`;
         }
 
         return `${testName} - OK`;
-    }).join('\n');
+    }).join('\n'));
+}
+
+function testReporterTAP(testResults) {
+    const objEntries = Object.entries(testResults);
+
+    return `1..${objEntries.length}\n` + (objEntries.map(([testName, testError], index) => {
+        if (testError) {
+            return `not ok ${index + 1} - ${testName}`;
+        }
+
+        return `ok ${index + 1} - ${testName}`;
+    }).join('\n'));
 }
 
 /** FRAMEWORK TESTS *///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -85,14 +99,14 @@ const frameworkTests = [
         ];
 
         const res = await testRunner(tests);
-        const testResults = testReporter(res);
+        const testResults = testReporter(res); //should be testReporter
 
         assert.ok(/ok - OK\nfail - Error: fail\n.*at/m.test(testResults));
     },
 
-    async function handlesAsyncFuncs() {
+    async function handlesSyncAndAsyncFuncs() {
         const tests = [
-            function okTest1() {},
+            function okTest1() { },
             async function okTest2() {
                 return new Promise(function (resolve, reject) {
                     setTimeout(resolve, 100, 'Blank');
@@ -146,5 +160,5 @@ const frameworkTests = [
 ];
 
 testRunner(frameworkTests).then((res) => {
-    console.log(testReporter(res));
+    console.log(testReporterTAP(res));
 }).catch(err => console.log(err));
